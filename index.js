@@ -46,9 +46,13 @@ async function buscarBestsellers() {
     titles.map(titles => titles.textContent));
     const links = await page.$$eval('#anonCarousel1 > ol > li > div > div > a:nth-child(2)', titles =>
     titles.map(titles => titles.getAttribute('href')));
+    const codigo = await page.$$eval('#anonCarousel1 > ol > li> div > div > a', titles =>
+    titles.map(titles => titles.outerHTML)
+    );  
 
     await browser.close();
-    console.log(nomes,valores,links);
+    console.log(nomes,valores,links,codigo);
+    console.log(`Url base: ${baseUrl}`)
     return nomes.reduce((acumulador,valorAtual,index)=>{
       return acumulador =[...acumulador,{nome:valorAtual,valor:valores[index],link:baseUrl+links[index]}]
     },[]);
@@ -73,7 +77,7 @@ exports.handler = async (event, context,callback) => {
     await page.setViewport({
       width: 1920,
       height: 1080
-  })
+    })
     await page.goto(baseUrl);
     //await page.screenshot({path: 'pessoal/example.png'}); 
     await page.goto('https://www.amazon.com.br/bestsellers');
@@ -91,10 +95,14 @@ exports.handler = async (event, context,callback) => {
     titles.map(titles => titles.textContent));
     const links = await page.$$eval('#anonCarousel1 > ol > li > div > div > a:nth-child(2)', titles =>
     titles.map(titles => titles.getAttribute('href')));
+    const codigo = await page.$$eval('#anonCarousel1 > ol > li> div > div > a > div> img', titles =>
+    titles.map(titles => titles.getAttribute('alt'))
+    );  
 
     await browser.close();
-    console.log(nomes,valores,links);
-    return nomes.reduce((acumulador,valorAtual,index)=>{
+    console.log(nomes,valores,codigo,links);
+    console.log(`Url base: ${baseUrl}`)
+    produtosBestsellers = nomes.reduce((acumulador,valorAtual,index)=>{
       return acumulador =[...acumulador,{nome:valorAtual,valor:valores[index],link:baseUrl+links[index]}]
     },[]);
     //
@@ -105,16 +113,22 @@ exports.handler = async (event, context,callback) => {
     };
     
     try {
-        let registros = await dynamo.scan({ TableName: 'users-table-dev' }).promise();
+        let {Items:registros} = await dynamo.scan({ TableName: 'users-table-dev' }).promise();
+        console.log(`Registros:${JSON.stringify(registros)}`)
         
         //Limpar os Registros
-        for (var x = 0; x < registros.Items.length; x++) {
-            response = await  dynamo.delete({TableName: 'users-table-dev',Key:registros.Items[x].userId}).promise()
+        if(registros.length>0){
+          for (var x = 0; x < registros.length; x++) {
+              response = await  dynamo.delete({TableName: 'users-table-dev',Key:registros.Items[x].userId}).promise();
+              console.log(`Resposta de Apagando registros:${JSON.stringify(response)}`);
+          }
         }
-        
+        console.log(`Tudo que vou salvar:${produtosBestsellers}`);
         //Adicionar os novos registros
         for (var i = 0; i < produtosBestsellers.length; i++) {
-            response = await dynamo.put({TableName:'users-table-dev',Item:{...produtosBestsellers[i],userId:i}}).promise();
+            console.log(`O que quero inserir:${JSON.stringify({TableName:'users-table-dev',Item:{...produtosBestsellers[i],userId:i}})}`);
+            response = await dynamo.put({TableName:'users-table-dev',Item:{...produtosBestsellers[i],userId:`a${i}`}}).promise();
+            console.log(`Resposta de inserindo registros:${response}`);
         }
         
     } catch (err) {
