@@ -22,7 +22,16 @@ Inicialmente foquei em criar o MVP, para que eu tenha uma entrega de uma aplica�
 
 Identifiquei um problema que pode acontecer que são os captcha, depois de acessar a página uma determinada quantidade de vezes eles começam a aparecer, com isso a função principal deve rodar pelo menos em hora e hora.
 
+Tive problemas para conseguir subir a aplicação na AWS, nesse momento aprendi como usar o serverless framework, realmente ele poupa tempo para fazer o deploy.
+Um dos maiores problemas foi o uso do Puppeteer, a lib completa é muito grande para subir na AWS, consegui resolver usando chrome-aws-lambda com o puppeteer-core.
+
 ## Etapas de desenvolvimento
 * [X] Extrair nome e valor dos 3 primeiros produtos mais vendidos
-* [ ] Salvar as informações no  AWS DynamoDB
-* [ ] Subir a aplicação na AWS
+* [X] Salvar as informações no  AWS DynamoDB
+* [X] Subir a aplicação na AWS
+* [ ] MVP
+* [ ] Limpar o código do MVP
+* [ ] Criar Endpoint de Consulta
+* [ ] Utilizar o EventBridge ou CloudWatch para agendamento diário
+* [ ] Escrever o Como Instalar e Como Usar do readme
+* [ ] Adicionar o uso de token no endpoint
