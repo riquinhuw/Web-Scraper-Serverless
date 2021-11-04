@@ -24,5 +24,11 @@ Identifiquei um problema que pode acontecer que são os captcha, depois de acess
 
 ## Etapas de desenvolvimento
 * [X] Extrair nome e valor dos 3 primeiros produtos mais vendidos
-* [ ] Salvar as informações no  AWS DynamoDB
-* [ ] Subir a aplicação na AWS
+* [X] Salvar as informações no  AWS DynamoDB
+* [X] Subir a aplicação na AWS
+* [ ] MVP
+* [ ] Limpar o código do MVP
+* [ ] Criar Endpoint de Consulta
+* [ ] Utilizar o EventBridge ou CloudWatch para agendamento diário
+* [ ] Escrever o Como Instalar e Como Usar do readme
+* [ ] Adicionar o uso de token no endpoint
