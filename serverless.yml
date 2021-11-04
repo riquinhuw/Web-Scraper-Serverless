@@ -25,12 +25,17 @@ provider:
             - Fn::GetAtt: [ UsersTable, Arn ]
   environment:
     USERS_TABLE: ${self:custom.tableName}
+  layers:
+    - arn:aws:lambda:us-east-1:764866452798:layer:chrome-aws-lambda:25
+
+
 
 functions:
   api:
-    handler: handler.handler
+    handler: index.handler
     events:
       - httpApi: '*'
+    timeout: 30
 
 resources:
   Resources:
@@ -45,6 +50,3 @@ resources:
             KeyType: HASH
         BillingMode: PAY_PER_REQUEST
         TableName: ${self:custom.tableName}
-package:
-  exclude:
-    - node_modules/puppeteer/.local-chromium/**
