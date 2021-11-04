@@ -119,7 +119,8 @@ exports.handler = async (event, context,callback) => {
         //Limpar os Registros
         if(registros.length>0){
           for (var x = 0; x < registros.length; x++) {
-              response = await  dynamo.delete({TableName: 'users-table-dev',Key:registros.Items[x].userId}).promise();
+              console.log(`Apagando o registro:${JSON.stringify({TableName: 'users-table-dev',Key:{userId:registros[x].userId}})}`);
+              response = await  dynamo.delete({TableName: 'users-table-dev',Key:{userId:registros[x].userId}}).promise();
               console.log(`Resposta de Apagando registros:${JSON.stringify(response)}`);
           }
         }
