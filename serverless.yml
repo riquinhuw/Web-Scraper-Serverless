@@ -36,6 +36,11 @@ functions:
     events:
       - httpApi: '*'
     timeout: 30
+  listar:
+    handler: listarBestsellers.handler
+    events:
+     - httpApi: '*'
+    timeout: 30
 
 resources:
   Resources:

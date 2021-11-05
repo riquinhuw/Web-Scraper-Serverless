@@ -35,3 +35,4 @@ Um dos maiores problemas foi o uso do Puppeteer, a lib completa é muito grande 
 * [ ] Utilizar o EventBridge ou CloudWatch para agendamento diário
 * [ ] Escrever o Como Instalar e Como Usar do readme
 * [ ] Adicionar o uso de token no endpoint
+* [ ] Melhorar o serverless.yml para a automatização correta.
