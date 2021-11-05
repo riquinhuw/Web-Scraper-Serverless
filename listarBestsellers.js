@@ -4,20 +4,14 @@ const AWS = require('aws-sdk');
 const puppeteer = require('puppeteer-core');
 const chromium = require('chrome-aws-lambda');
 const dynamo = new AWS.DynamoDB.DocumentClient();
+const express = require("express");
+const serverless = require("serverless-http");
 
-let produtosBestsellers = [];
-
-/*
-(async()=>{
-  produtosBestsellers = await buscarBestsellers();
-  console.log(produtosBestsellers);
-})();
-*/
-
-//TODO: usar then,catch
+const app = express();
+app.use(express.json());
 
 
-exports.handler = async (event, context,callback) => {
+exports.handler = app.get('/', async (req, res) => {
     //
     let response;
     let statusCode = '200';
@@ -39,15 +33,6 @@ exports.handler = async (event, context,callback) => {
         statusCode = '400';
         response = err.message;
     } finally {
-      //console.log(Items)
-      /*
-        response = response.Items.reduce((acumulador,atual)=>{
-          if (atual.userId=='a0'|| atual.userId=='a1'||atual.userId=='a2'){
-            delete atual.userId
-            acumulador.push(atual)
-            return acumulador
-          }
-        },[]);*/
         let retorno =[];
         for (let i = 0; i < response.Items.length; i++) {
           if (response.Items[i].userId=='a0'|| response.Items[i].userId=='a1'||response.Items[i].userId=='a2'){
@@ -57,10 +42,7 @@ exports.handler = async (event, context,callback) => {
         }
         response=retorno;
     }
+    return res.status(statusCode).json(response);
+});
 
-    return {
-        statusCode,
-        response,
-        headers,
-    };
-};
+module.exports.handler = serverless(app); 

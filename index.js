@@ -4,9 +4,11 @@ const AWS = require('aws-sdk');
 const puppeteer = require('puppeteer-core');
 const chromium = require('chrome-aws-lambda');
 const dynamo = new AWS.DynamoDB.DocumentClient();
+const express = require("express");
+const serverless = require("serverless-http");
 
-let produtosBestsellers = [];
-
+const app = express();
+app.use(express.json());
 /*
 (async()=>{
   produtosBestsellers = await buscarBestsellers();
@@ -58,9 +60,10 @@ async function buscarBestsellers() {
     },[]);
   };
 
-exports.handler = async (event, context,callback) => {
+app.get("/atualizarlista", async (req, res) => {
     //console.log('Received event:', JSON.stringify(event, null, 2));
     const baseUrl ='https://www.amazon.com.br';
+    let produtosBestsellers = [];
     const browser = await puppeteer.launch({
       executablePath: await chromium.executablePath,
       args: chromium.args
@@ -90,19 +93,18 @@ exports.handler = async (event, context,callback) => {
      * Dessa forma só estou trazendo 3 primeiros itens de uma categoria só.
      */
     const nomes = await page.$$eval('#anonCarousel1 > ol > li> div > div > a > span > div ', titles =>
-    titles.map(titles => titles.textContent));  
+    titles.map(titles => titles.textContent));//Funciona quando chamo o lambda em si
     const valores = await page.$$eval('#anonCarousel1 > ol > li > div > div > div > a > span > span ', titles =>
     titles.map(titles => titles.textContent));
     const links = await page.$$eval('#anonCarousel1 > ol > li > div > div > a:nth-child(2)', titles =>
     titles.map(titles => titles.getAttribute('href')));
-    const codigo = await page.$$eval('#anonCarousel1 > ol > li> div > div > a > div> img', titles =>
-    titles.map(titles => titles.getAttribute('alt'))
-    );  
+    const imgTexto = await page.$$eval('#anonCarousel1 > ol > li> div > div > a > div> img', titles =>
+    titles.map(titles => titles.getAttribute('alt')));  
 
     await browser.close();
-    console.log(nomes,valores,codigo,links);
+    console.log(nomes,valores,imgTexto,links);
     console.log(`Url base: ${baseUrl}`)
-    produtosBestsellers = nomes.reduce((acumulador,valorAtual,index)=>{
+    produtosBestsellers = imgTexto.reduce((acumulador,valorAtual,index)=>{
       return acumulador =[...acumulador,{nome:valorAtual,valor:valores[index],link:baseUrl+links[index]}]
     },[]);
     //
@@ -139,9 +141,9 @@ exports.handler = async (event, context,callback) => {
         response = JSON.stringify(response);
     }
 
-    return {
-        statusCode,
-        response,
-        headers,
-    };
-};
+
+    return res.status(statusCode); 
+
+});
+
+module.exports.handler = serverless(app); 
