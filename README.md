@@ -77,7 +77,7 @@ Com o serverless.yml devidamente configurado, estarei limpando o código já par
 * [X] Salvar as informações no  AWS DynamoDB
 * [X] Subir a aplicação na AWS
 * [X] MVP
-* [ ] Limpar o código do MVP
+* [X] Limpar o código do MVP
 * [X] Criar Endpoint de Consulta
 * [X] Utilizar o EventBridge ou CloudWatch para agendamento diário
 * [X] Escrever o Como Instalar e Como Usar do readme
