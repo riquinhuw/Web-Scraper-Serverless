@@ -47,7 +47,7 @@ Se tudo estiver correto será retornado status **200** com um vetor de 3 objetos
 ```
 
 ### AtualizarBestsellers ```/atualizarlista```
-O [atualizarBestsellers.js](linkSeráGerado) irá usar o puppeteer com o ```chrome-aws-lambda```, a resolução foi configurada em full hd para conseguir pegar os produtos da página, já que a renderização da página é responsiva.
+O [atualizarBestsellers.js](https://github.com/riquinhuw/Web-Scraper-Serverless/blob/main/atualizarBestsellers.js) irá usar o puppeteer com o ```chrome-aws-lambda```, a resolução foi configurada em full hd para conseguir pegar os produtos da página, já que a renderização da página é responsiva.
 
 Inicialmente será necessário acessar a página principal da Amazon, para conseguir "autorização" de acessar a parte de bestsellers.
 
