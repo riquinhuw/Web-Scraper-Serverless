@@ -28,7 +28,7 @@ provider:
 
 functions:
   atualizar:
-    handler: index.handler
+    handler: atualizarBestsellers.handler
     description: Realiza o web scraping na página de Bestsellers da Amazon
     events:
       - httpApi: 'GET /atualizarlista'
