@@ -1,13 +1,11 @@
 org: chdrdevelop
 app: scraper-node
-service: dynamodb-escrita
+service: bestsellers-amazon
 frameworkVersion: '2'
-
-custom:
-  tableName: 'users-table-${sls:stage}'
 
 provider:
   name: aws
+  apiName: bestsellers-amazon
   runtime: nodejs14.x
   lambdaHashingVersion: '20201221'
   iam:
@@ -23,23 +21,25 @@ provider:
             - dynamodb:DeleteItem
           Resource:
             - Fn::GetAtt: [ UsersTable, Arn ]
-  environment:
-    USERS_TABLE: ${self:custom.tableName}
   layers:
     - arn:aws:lambda:us-east-1:764866452798:layer:chrome-aws-lambda:25
 
 
 
 functions:
-  api:
-    handler: index.handler
+  atualizar:
+    handler: atualizarBestsellers.handler
+    description: Realiza o web scraping na página de Bestsellers da Amazon
     events:
-      - httpApi: '*'
+      - httpApi: 'GET /atualizarlista'
+      - eventBridge:
+          schedule: rate(1 day)
     timeout: 30
   listar:
     handler: listarBestsellers.handler
+    description: Lista os 3 produtos mais vendidos da Amazon
     events:
-     - httpApi: '*'
+     - httpApi: 'GET /'  
     timeout: 30
 
 resources:
@@ -48,10 +48,10 @@ resources:
       Type: AWS::DynamoDB::Table
       Properties:
         AttributeDefinitions:
-          - AttributeName: userId
-            AttributeType: S
+          - AttributeName: id
+            AttributeType: N
         KeySchema:
-          - AttributeName: userId
+          - AttributeName: id
             KeyType: HASH
         BillingMode: PAY_PER_REQUEST
-        TableName: ${self:custom.tableName}
+        TableName: bestsellers-amazon

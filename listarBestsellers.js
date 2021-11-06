@@ -14,35 +14,27 @@ app.use(express.json());
 exports.handler = app.get('/', async (req, res) => {
     //
     let response;
+    let retorno =[];
     let statusCode = '200';
     const headers = {
         'Content-Type': 'application/json',
     };
     
     try {
-
-        //Adicionar os novos registros
-
-            response = await dynamo.scan({TableName:'users-table-dev'
-                                      }).promise();
-            //response = await dynamo.put({TableName:'users-table-dev',Item:{...produtosBestsellers[i],userId:`a${i}`}}).promise();
-            console.log(`Resposta de inserindo registros:${JSON.stringify(response.Items)}`);
-        
-        
+        response = await dynamo.scan({TableName:'bestsellers-amazon'}).promise();
+        if(response.Items.length<1)
+        return res.status(200).json({info:'O banco está vazio'})
+    for (let i = 0; i < response.Items.length; i++) {//TODO: Ver a possibildiade de usar um filter
+      if (response.Items[i].id==0|| response.Items[i].id==1||response.Items[i].id==2){
+        delete response.Items[i].id;
+        retorno.push(response.Items[i]);
+      } 
+    }    
     } catch (err) {
-        statusCode = '400';
-        response = err.message;
-    } finally {
-        let retorno =[];
-        for (let i = 0; i < response.Items.length; i++) {
-          if (response.Items[i].userId=='a0'|| response.Items[i].userId=='a1'||response.Items[i].userId=='a2'){
-            delete response.Items[i].userId;
-            retorno.push(response.Items[i]);
-          } 
-        }
-        response=retorno;
+        statusCode=400;
+        retorno = err.message;
     }
-    return res.status(statusCode).json(response);
+    return res.status(statusCode).json(retorno);
 });
 
 module.exports.handler = serverless(app); 
