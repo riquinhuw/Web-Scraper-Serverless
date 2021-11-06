@@ -115,22 +115,22 @@ app.get("/atualizarlista", async (req, res) => {
     };
     
     try {
-        let {Items:registros} = await dynamo.scan({ TableName: 'users-table-dev' }).promise();
+        let {Items:registros} = await dynamo.scan({ TableName: 'bestsellers-amazon' }).promise();
         console.log(`Registros:${JSON.stringify(registros)}`)
         
         //Limpar os Registros
         if(registros.length>0){
           for (var x = 0; x < registros.length; x++) {
-              console.log(`Apagando o registro:${JSON.stringify({TableName: 'users-table-dev',Key:{userId:registros[x].userId}})}`);
-              response = await  dynamo.delete({TableName: 'users-table-dev',Key:{userId:registros[x].userId}}).promise();
+              console.log(`Apagando o registro:${JSON.stringify({TableName: 'bestsellers-amazon',Key:{id:registros[x].id}})}`);
+              response = await  dynamo.delete({TableName: 'bestsellers-amazon',Key:{id:registros[x].id}}).promise();
               console.log(`Resposta de Apagando registros:${JSON.stringify(response)}`);
           }
         }
         console.log(`Tudo que vou salvar:${produtosBestsellers}`);
         //Adicionar os novos registros
         for (var i = 0; i < produtosBestsellers.length; i++) {
-            console.log(`O que quero inserir:${JSON.stringify({TableName:'users-table-dev',Item:{...produtosBestsellers[i],userId:i}})}`);
-            response = await dynamo.put({TableName:'users-table-dev',Item:{...produtosBestsellers[i],userId:`a${i}`}}).promise();
+            console.log(`O que quero inserir:${JSON.stringify({TableName:'bestsellers-amazon',Item:{...produtosBestsellers[i],id:i}})}`);
+            response = await dynamo.put({TableName:'bestsellers-amazon',Item:{...produtosBestsellers[i],id:i}}).promise();
             console.log(`Resposta de inserindo registros:${response}`);
         }
         
@@ -142,7 +142,7 @@ app.get("/atualizarlista", async (req, res) => {
     }
 
 
-    return res.status(statusCode); 
+    return res.status(statusCode).json({mensagem:'Processo Finalizado'}); 
 
 });
 
