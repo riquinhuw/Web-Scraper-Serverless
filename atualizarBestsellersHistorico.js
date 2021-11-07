@@ -3,16 +3,19 @@ console.log('Iniciando função');
 const AWS = require('aws-sdk');
 const puppeteer = require('puppeteer-core');
 const chromium = require('chrome-aws-lambda');
+const { v4: uuidv4 } = require('uuid');
 const dynamo = new AWS.DynamoDB.DocumentClient();
 const express = require("express");
 const serverless = require("serverless-http");
 
-const app = express();
-app.use(express.json());
 
-app.get("/atualizarlista", async (req, res) => {
+module.exports.handler = async () => {
   const baseUrl = 'https://www.amazon.com.br';
+  let response = 'Processo de salvar os bestsellers no histórico foi finalizado';
+  let statusCode = '200';
   let produtosBestsellers = [];
+  const datahora = new Date().toString();
+  console.log("Datahora:"+datahora)
   const browser = await puppeteer.launch({
     executablePath: await chromium.executablePath,
     args: chromium.args
@@ -26,12 +29,7 @@ app.get("/atualizarlista", async (req, res) => {
   await page.goto(baseUrl);
   await page.goto('https://www.amazon.com.br/bestsellers');
 
-  //TODO: Melhorar a busca para trazer cada <li> como um obj
-  /**
-   * Buscando os nomes dos itens da primeira fileira, a busca está sendo feita "na mão"
-   * Dessa forma só estou trazendo 3 primeiros itens de uma categoria só.
-   * Ainda não descobri o motivo, mas a primeira busca do $$eval sempre retorna vazio, então faço duas vezes.
-   */
+
   let nomes = await page.$$eval('#anonCarousel1 > ol > li> div > div > a > span > div ', nomeBusca =>
     nomeBusca.map(elemento => elemento.textContent));
   nomes = await page.$$eval('#anonCarousel1 > ol > li> div > div > a > span > div ', nomeBusca =>
@@ -42,36 +40,21 @@ app.get("/atualizarlista", async (req, res) => {
     linkBsuca.map(elemento => elemento.getAttribute('href')));
 
   await browser.close();
-  produtosBestsellers = nomes.reduce((acumulador, valorAtual, index) => {
-    return acumulador = [...acumulador, { nome: valorAtual, valor: valores[index], link: baseUrl + links[index] }]
-  }, []);
 
-  let response = 'Processo Finalizado';
-  let statusCode = '200';
+  produtosBestsellers = nomes.reduce((acumulador, valorAtual, index) => {
+    return acumulador = [...acumulador, {uuid:uuidv4(), nome: valorAtual, valor: valores[index], link: baseUrl + links[index],datahora:datahora }]
+  }, []);  
 
   try {
-    
-    let { Items: registros } = await dynamo.scan({ TableName: 'bestsellers-amazon' }).promise();
-
-    if (registros.length > 0) {
-      for (var x = 0; x < registros.length; x++) {
-        console.log(`Apagando o registro:${JSON.stringify({ TableName: 'bestsellers-amazon', Key: { id: registros[x].id } })}`);
-        await dynamo.delete({ TableName: 'bestsellers-amazon', Key: { id: registros[x].id } }).promise();
-      }
-    }
-
     for (var i = 0; i < produtosBestsellers.length; i++) {
-      console.log(`Inserindo:${JSON.stringify({ TableName: 'bestsellers-amazon', Item: { ...produtosBestsellers[i], id: i } })}`);
-      await dynamo.put({ TableName: 'bestsellers-amazon', Item: { ...produtosBestsellers[i], id: i } }).promise();
+      console.log(`Inserindo:${JSON.stringify({ TableName: 'bestsellers-amazon-historico', Item: produtosBestsellers[i]})}`);
+      await dynamo.put({ TableName: 'bestsellers-amazon-historico', Item: produtosBestsellers[i]}).promise();
     }
 
   } catch (err) {
     statusCode = '400';
     response = err.message;
   } finally {
-    return res.status(statusCode).json({ mensagem: response });
+    return { mensagem: response,statusCode:statusCode };
   }
-
-});
-
-module.exports.handler = serverless(app);
+};

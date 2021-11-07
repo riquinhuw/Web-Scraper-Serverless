@@ -11,6 +11,7 @@ Temos dois Lambadas, um para atualizar os produtos mais vendidos da Amazon no Dy
 * AWS APIGateway
 * AWS DynamoDB
 * AWS EventBridge
+* AWS Step Functions
 * Puppeteer
 
 ## Como instalar
@@ -27,7 +28,11 @@ Realizar o deploy via serverless (condierando que você já tenha configurado a 
 serverless deploy
 ```
 ## Funcionamento
-Ao realizar o deploy será criado dois endpoints ```GET``` um raiz ```/``` para consultar os 3 produtos mais vendidos, e o ```/autalizarlista``` para forçar a atualização dos produtos mais vendidos, o EventBridge está configurado para rodar uma vez por dia.
+Ao realizar o deploy será criado três endpoints ```GET``` um raiz ```/``` para consultar os 3 produtos mais vendidos, o ```/autalizarlista``` para forçar a atualização dos produtos mais vendidos, e o ```/historico``` para consultar os mais vendidos dos outros dias.
+
+Temos o EventBridge configurado para atualizar 2 tabelas uma sendo a *bestsellers-amazon* onde só é guardado os produtos do dia e que pode ser atualizado usando o endpoint ```/atualizarlista```, a outra *bestsellers-amazon-historico* onde apenas o EventBridge atualiza.
+
+A atualização do *bestsellers-amazon-historico* é feito usando o Step Functions para atualizar e informar no canal do telegram que a atualização foi feita.
 
 ### ListarBestsellers ```/```
 O [listarBestsellers.js](https://github.com/riquinhuw/Web-Scraper-Serverless/blob/main/listarBestsellers.js) irá consultar a tabela ```bestsellers-amazon```, caso aconteça um problema na requisição será retronado status **400** com a mensagem de erro.
@@ -47,7 +52,7 @@ Se tudo estiver correto será retornado status **200** com um vetor de 3 objetos
 ```
 
 ### AtualizarBestsellers ```/atualizarlista```
-O [atualizarBestsellers.js](linkSeráGerado) irá usar o puppeteer com o ```chrome-aws-lambda```, a resolução foi configurada em full hd para conseguir pegar os produtos da página, já que a renderização da página é responsiva.
+O [atualizarBestsellers.js](https://github.com/riquinhuw/Web-Scraper-Serverless/blob/main/atualizarBestsellers.js) irá usar o puppeteer com o ```chrome-aws-lambda```, a resolução foi configurada em full hd para conseguir pegar os produtos da página, já que a renderização da página é responsiva.
 
 Inicialmente será necessário acessar a página principal da Amazon, para conseguir "autorização" de acessar a parte de bestsellers.
 
@@ -56,6 +61,51 @@ Com a página carregada será feito o scraping, depois será apagado todos os re
 Ao final será retornado status code **200** para sucesso ou **400** com o erro caso que dê algum problema, se for **200** será envaido o JSON:
 ```JSON
 {"mensagem":"Processo Finalizado"}
+```
+
+### ListarBestsellersHistorico ```/historico```
+O [listarBestsellersHistorico.js](https://github.com/riquinhuw/Web-Scraper-Serverless/blob/main/listarBestsellersHistorico.js) irá consultar a tabela ```bestsellers-amazon-historico```, caso aconteça um problema na requisição será retronado status **400** com a mensagem de erro.
+Se a tabela estiver vazia irá retornar status **200** com o seguinte JSON:
+```JSON
+{"info":"O banco está vazio"}
+```
+Se tudo estiver correto será retornado status **200** com um vetor de 3 objetos contendo os produtos:
+```JSON
+[
+    {
+        "uuid": "15beb04d-1d89-4e6f-9e4f-f2ae733cb8f1",
+        "datahora": "Sun Nov 07 2021 02:18:55 GMT+0000 (Coordinated Universal Time)",
+        "valor": "R$ 53,01",
+        "link": "https://www.amazon.com.br/Souza-3704-Suporte-Ergon%C3%B4mico-Multicolor/dp/B077P59SWX/ref=zg-bs_furniture_6/140-8166625-8816639?pd_rd_w=kpZls&pf_rd_p=c0c0f25f-aaf5-43d0-b46e-c8c2c04a86c2&pf_rd_r=CW47A358E3DQM1QKVJ8B&pd_rd_r=638b79c4-8ce1-4f03-8e71-b010f07584fc&pd_rd_wg=MqJ31&pd_rd_i=B077P59SWX&psc=1",
+        "nome": "Apoio Ergonômico para Os Pés, MDF Natural (Cor: Black Piano) - Souza & Cia"
+    }
+]
+```
+
+### AtualizarBestsellersHistorico
+O [atualizarBestsellersHistorico.js](https://github.com/riquinhuw/Web-Scraper-Serverless/blob/main/atualizarBestsellersHistorico.js) irá usar o puppeteer com o ```chrome-aws-lambda```, a resolução foi configurada em full hd para conseguir pegar os produtos da página, já que a renderização da página é responsiva.
+
+Inicialmente será necessário acessar a página principal da Amazon, para conseguir "autorização" de acessar a parte de bestsellers.
+
+Com a página carregada será feito o scraping, depois será apagado todos os registros para que sejam adicionados os novos.
+
+Ao final será retornado status code **200** para sucesso ou **400** com o erro caso que dê algum problema, se for **200** será envaido o JSON:
+```JSON
+    {
+        "mensagem":"Processo de salvar os bestsellers no histórico foi finalizado",
+        "statusCode":200
+    }
+```
+
+### enviarMensagemTelegram
+O [enviarMensagemTelegram.js](https://github.com/riquinhuw/Web-Scraper-Serverless/blob/main/enviarMensagemTelegram.js) é responsavel em receber uma mensagem e enviar para um canal no Telegram, utilizando a API do Telegram.
+
+Ao final será retornado status code **200** caso tenha sucesso ou **400** se acontecer um problema.
+```JSON
+{
+    "statusCode":200,
+    "response:":"Mensagem Enviada com sucesso"
+}
 ```
 
 *****
@@ -72,18 +122,22 @@ Percebi que preciso usar o Express parar fazer o retorno das requisições, acre
 
 Com o serverless.yml devidamente configurado, estarei limpando o código já para a sua versão final, acredito que ainda tem muita coisa que possa melhorar, mas ele está funcional.
 
+Realizei a implementação da função para enviar mensagens via Telegram, afim de usar a ferramenta AWS Function.
+
 ## Etapas de desenvolvimento
 * [X] Extrair nome e valor dos 3 primeiros produtos mais vendidos
 * [X] Salvar as informações no  AWS DynamoDB
 * [X] Subir a aplicação na AWS
 * [X] MVP
-* [ ] Limpar o código do MVP
+* [X] Limpar o código do MVP
 * [X] Criar Endpoint de Consulta
 * [X] Utilizar o EventBridge ou CloudWatch para agendamento diário
 * [X] Escrever o Como Instalar e Como Usar do readme
 * [ ] Adicionar o uso de token no endpoint
 * [X] Melhorar o serverless.yml para a automatização correta.
 * [ ] Refatorar atualizarBestsellers.js
+* [X] Utilizar o AWS Step Functions
+
 
 ## Considerações finais
 O uso do banco de dados está em hardcode, é possível configurar para usar variável de ambiente para customização, o mesmo se aplica para os nomes dos Lambdas e dos demais recursos da AWS.
