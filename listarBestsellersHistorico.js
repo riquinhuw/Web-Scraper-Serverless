@@ -9,27 +9,21 @@ const app = express();
 app.use(express.json());
 
 
-exports.handler = app.get('/', async (req, res) => {
+exports.handler = app.get('/historico', async (req, res) => {
     //
     let response;
-    let retorno = [];
     let statusCode = '200';
-    const idsDeRetorno = [0, 1, 2];
 
     try {
-        response = await dynamo.scan({ TableName: 'bestsellers-amazon' }).promise();
+        response = {Items}.Items = await dynamo.scan({ TableName: 'bestsellers-amazon-historico' }).promise();
         if (response.Items.length < 1)
             return res.status(200).json({ info: 'O banco está vazio' })
-
-        retorno = response.Items.filter((obj) => {
-            if (idsDeRetorno.includes(obj.id))
-                return delete obj.id;
-        });
     } catch (err) {
         statusCode = 400;
-        retorno = err.message;
+        response = err.message;
+    }finally{
+        return res.status(statusCode).json(response);
     }
-    return res.status(statusCode).json(retorno);
 });
 
 module.exports.handler = serverless(app);

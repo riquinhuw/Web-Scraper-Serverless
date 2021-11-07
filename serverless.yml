@@ -2,6 +2,8 @@ org: chdrdevelop
 app: scraper-node
 service: bestsellers-amazon
 frameworkVersion: '2'
+#variablesResolutionMode: 20210219
+useDotenv: true
 
 provider:
   name: aws
@@ -21,10 +23,13 @@ provider:
             - dynamodb:DeleteItem
           Resource:
             - Fn::GetAtt: [ UsersTable, Arn ]
+            - Fn::GetAtt: [BestsellersAmazonHistorico, Arn]
   layers:
     - arn:aws:lambda:us-east-1:764866452798:layer:chrome-aws-lambda:25
 
-
+plugins:
+  - serverless-dotenv-plugin
+  - serverless-step-functions
 
 functions:
   atualizar:
@@ -41,6 +46,27 @@ functions:
     events:
      - httpApi: 'GET /'  
     timeout: 30
+  listarHistorico:
+    handler: listarBestsellersHistorico.handler
+    description: Lista os histórico de Bestsellers
+    events:
+     - httpApi: 'GET /historico'  
+    timeout: 30
+  atualizarHistorico:
+    handler: atualizarBestsellersHistorico.handler
+    description: Realiza o web scraping na página de Bestsellers da Amazon salvando no histórico
+    events:
+      - eventBridge:
+          schedule: rate(1 day)
+    timeout: 30
+  enviarMensagemTelegram:
+    handler: enviarMensagemTelegram.handler
+    description: Realiza o envio da mensagem para o canal do telegram
+    timeout: 30
+    environment:
+      CHAT_ID: ${env:CHAT_ID}
+      TELEGRAM_TOKEN: ${env:TELEGRAM_TOKEN}
+    
 
 resources:
   Resources:
@@ -55,3 +81,44 @@ resources:
             KeyType: HASH
         BillingMode: PAY_PER_REQUEST
         TableName: bestsellers-amazon
+    BestsellersAmazonHistorico:
+      Type: AWS::DynamoDB::Table
+      Properties:
+        AttributeDefinitions:
+          - AttributeName: uuid
+            AttributeType: S
+        KeySchema:
+          - AttributeName: uuid
+            KeyType: HASH
+        BillingMode: PAY_PER_REQUEST
+        TableName: bestsellers-amazon-historico
+
+stepFunctions:
+  stateMachines:
+    attBestHist:
+      events:
+        - schedule:
+            rate: rate(1 day)
+            enabled: true
+      name: AtualizacaoBestsellersHistoricoComTelegram
+      definition:
+        Comment: "Adiciona os novos Bestsellers ao histórico e avisa no canal do telegram"
+        StartAt: BuscarBestsellersAmazonParaHistorico
+        States:
+          BuscarBestsellersAmazonParaHistorico:
+            Type: Task
+            Resource:
+              Fn::GetAtt: [atualizarHistorico, Arn]
+            Parameters:
+              Payload.$: $
+            ResultSelector:
+              mensagem.$: $.Payload.mensagem
+            Next: EnviarMensagemTelegram
+          EnviarMensagemTelegram:
+            Type: Task
+            Resource:
+              Fn::GetAtt: [enviarMensagemTelegram, Arn]
+            OutputPath: $.Payload
+            Parameters:
+              Payload.$: $
+            End: true
