@@ -4,7 +4,28 @@ _Aplicação Web Scraper para salvar os 3 itens mais vendidos da Amazon, disponi
 
 ***********
 ## Sobre o projeto
-Temos dois Lambadas, um para atualizar os produtos mais vendidos da Amazon no DynamoDB utilizando o Puppeteer para fazer o scraping, outro para consultar o DynamoDB e retornar os 3 produtos mais vendidos.
+#### A aplicação funciona com 5 Lambadas:
+- **AtualizarBestsellers**: Responsável por realizar o scraping na Amazon e salvar no DynamoDB.
+- **ListarBestsellers**: Responsável por listar os 3 produtos mais vendidos do dia.
+- **ListarBestsellersHistorico**: Responsável por realizar o scraping e salvar no DynamoDB Histórico.
+- **AtualizarBestsellersHistorico**: Responsável por listar todos os produtos do histórico.
+- **EnviarMensagemTelegram**: Responsável por enviar a notificação para o canal no Telegram.
+
+#### Possuindo 3 endpoints:
+- **GET /**: Informando os 3 produtos mais vendidos do dia.
+- **GET /atualizarlista**: Para atualizar os 3 produtos mais vendidos do dia.
+- **GET /historico**: Informando histórico com todos os produtos que foram mais vendidos.
+
+#### Com 2 DynamoDB:
+- **Bestsellers-Amazon**: Responsável em guardar apenas os produtos mais vendidos do dia.
+- **Bestsellers-Amazon-Historico**: Responsável em manter todos os produtos que foram classificados como mais vendidos.
+
+#### Utilizando 2 EventBridge:
+- **Atualizar**: Rodando uma vez ao dia para atualizar a lista dos produtos do dia, acessando diretamente o Lambda *AtualizarBestsellers*.
+- **AttBestHist**: Rodando uma vez ao dia para atualizar os produtos do histórico e enviar uma mensagem para o canal do Telegram, utilizando o Step Function *AtualizacaoBestsellersHistoricoComTelegram*.
+
+#### E um Step Function:
+- **AtualizacaoBestsellersHistoricoComTelegram**: Utilizando a lambda *AtualizarBestsellersHistorico* e jogando o resultado para a lambda  *EnviarMensagemTelegram*.
 
 ## Tecnologias
 * AWS Lambda
@@ -13,6 +34,7 @@ Temos dois Lambadas, um para atualizar os produtos mais vendidos da Amazon no Dy
 * AWS EventBridge
 * AWS Step Functions
 * Puppeteer
+* Serverless
 
 ## Como instalar
 Clonar o projeto:
@@ -35,7 +57,7 @@ Temos o EventBridge configurado para atualizar 2 tabelas uma sendo a *bestseller
 A atualização do *bestsellers-amazon-historico* é feito usando o Step Functions para atualizar e informar no canal do telegram que a atualização foi feita.
 
 ### ListarBestsellers ```/```
-O [listarBestsellers.js](https://github.com/riquinhuw/Web-Scraper-Serverless/blob/main/listarBestsellers.js) irá consultar a tabela ```bestsellers-amazon```, caso aconteça um problema na requisição será retronado status **400** com a mensagem de erro.
+O [listarBestsellers.js](https://github.com/riquinhuw/Web-Scraper-Serverless/blob/main/listarBestsellers.js) irá consultar a tabela ```bestsellers-amazon```, caso aconteça um problema na requisição será retornado status **400** com a mensagem de erro.
 Se a tabela estiver vazia irá retornar status **200** com o seguinte JSON:
 ```JSON
 {"info":"O banco está vazio"}
@@ -64,7 +86,7 @@ Ao final será retornado status code **200** para sucesso ou **400** com o erro 
 ```
 
 ### ListarBestsellersHistorico ```/historico```
-O [listarBestsellersHistorico.js](https://github.com/riquinhuw/Web-Scraper-Serverless/blob/main/listarBestsellersHistorico.js) irá consultar a tabela ```bestsellers-amazon-historico```, caso aconteça um problema na requisição será retronado status **400** com a mensagem de erro.
+O [listarBestsellersHistorico.js](https://github.com/riquinhuw/Web-Scraper-Serverless/blob/main/listarBestsellersHistorico.js) irá consultar a tabela ```bestsellers-amazon-historico```, caso aconteça um problema na requisição será retornado status **400** com a mensagem de erro.
 Se a tabela estiver vazia irá retornar status **200** com o seguinte JSON:
 ```JSON
 {"info":"O banco está vazio"}
@@ -98,7 +120,7 @@ Ao final será retornado status code **200** para sucesso ou **400** com o erro 
 ```
 
 ### enviarMensagemTelegram
-O [enviarMensagemTelegram.js](https://github.com/riquinhuw/Web-Scraper-Serverless/blob/main/enviarMensagemTelegram.js) é responsavel em receber uma mensagem e enviar para um canal no Telegram, utilizando a API do Telegram.
+O [enviarMensagemTelegram.js](https://github.com/riquinhuw/Web-Scraper-Serverless/blob/main/enviarMensagemTelegram.js) é responsável em receber uma mensagem e enviar para um canal no Telegram, utilizando a API do Telegram.
 
 Ao final será retornado status code **200** caso tenha sucesso ou **400** se acontecer um problema.
 ```JSON
@@ -108,9 +130,15 @@ Ao final será retornado status code **200** caso tenha sucesso ou **400** se ac
 }
 ```
 
+### Step Function
+O Setp Function foi utilizado para enviar uma notificação via Telegram informando que foi atualizado o banco de histórico, com o EventBridge para que essa operação seja feita uma vez por dia.
+
+![Step Function](https://user-images.githubusercontent.com/24635144/140645132-0f0c2ca8-68ec-45b2-970c-3ca06c25b96b.png)
+
+
 *****
 
-## Sobre o desenvolimento
+## Sobre o desenvolvimento
 Inicialmente foquei em criar o MVP, para que eu tenha uma entrega de uma aplicação funcional.
 
 Identifiquei um problema que pode acontecer que são os captcha, depois de acessar a página uma determinada quantidade de vezes eles começam a aparecer, com isso a função principal deve rodar pelo menos em hora e hora.
@@ -146,4 +174,4 @@ A forma que o scraping foi construído não irá funcionar se a página de Bests
 
 Durante o scraping inicialmente é acessado a página principal da Amazon, para que seja carregado alguma informação especifica antes de acessar a página de Bestsellers. Caso que página principal não seja acessada antes irá dar o erro de "Página não encontrada" quando for acessar os Bestsellers.
 
-É possivel apagar todos os registros de uma vez só, mas estou apagando um registro de cada vez. Outra solução é realizar um update caso que já tenha registro.
+É possível apagar todos os registros de uma vez só, mas estou apagando um registro de cada vez. Outra solução é realizar um update caso que já tenha registro.
