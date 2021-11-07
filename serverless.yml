@@ -101,6 +101,7 @@ stepFunctions:
             rate: rate(1 day)
             enabled: true
       name: AtualizacaoBestsellersHistoricoComTelegram
+      type: EXPRESS
       definition:
         Comment: "Adiciona os novos Bestsellers ao histórico e avisa no canal do telegram"
         StartAt: BuscarBestsellersAmazonParaHistorico
@@ -111,6 +112,7 @@ stepFunctions:
               Fn::GetAtt: [atualizarHistorico, Arn]
             Parameters:
               Payload.$: $
+            #Retry: [ErrorEquals: [Lambda.ServiceException,Lambda.AWSLambdaException,Lambda.SdkClientException],IntervalSeconds: 2,MaxAttempts: 6,BackoffRate: 2]
             ResultSelector:
               mensagem.$: $.Payload.mensagem
             Next: EnviarMensagemTelegram
@@ -121,4 +123,5 @@ stepFunctions:
             OutputPath: $.Payload
             Parameters:
               Payload.$: $
+            #Retry: [ErrorEquals: [Lambda.ServiceException,Lambda.AWSLambdaException,Lambda.SdkClientException],IntervalSeconds: 2,MaxAttempts: 6,BackoffRate: 2]
             End: true

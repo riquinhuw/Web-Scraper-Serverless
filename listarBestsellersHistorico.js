@@ -15,14 +15,14 @@ exports.handler = app.get('/historico', async (req, res) => {
     let statusCode = '200';
 
     try {
-        response = {Items}.Items = await dynamo.scan({ TableName: 'bestsellers-amazon-historico' }).promise();
+        response = await dynamo.scan({ TableName: 'bestsellers-amazon-historico' }).promise();
         if (response.Items.length < 1)
             return res.status(200).json({ info: 'O banco está vazio' })
     } catch (err) {
         statusCode = 400;
         response = err.message;
     }finally{
-        return res.status(statusCode).json(response);
+        return res.status(statusCode).json(response.Items);
     }
 });
 
